@@ -1,0 +1,43 @@
+<div class="row mb-4">
+    <div class="col-md-12">
+        <form method="GET" action="/" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" placeholder="Buscar produto..." class="form-control">
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="brand" placeholder="Marca" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-secondary">Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <% products.forEach(function(product) { %>
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <% if(product.ImageUrl) { %>
+                    <img src="<%= product.ImageUrl %>" class="card-img-top" alt="<%= product.Name %>" style="height: 200px; object-fit: cover;">
+                <% } else { %>
+                    <div class="card-img-top bg-secondary" style="height: 200px;"></div>
+                <% } %>
+                <div class="card-body">
+                    <h5 class="card-title"><%= product.Name %></h5>
+                    <p class="card-text text-truncate"><%= product.Description %></p>
+                    <p class="card-text"><strong>R$ <%= product.Price.toFixed(2) %></strong></p>
+                    <p class="card-text"><small class="text-muted">Estoque: <%= product.Quantity %></small></p>
+                </div>
+                <div class="card-footer bg-white border-top-0">
+                    <form action="/cart/add" method="POST">
+                        <input type="hidden" name="productId" value="<%= product.rowKey %>">
+                        <button type="submit" class="btn btn-primary w-100" <%= product.Quantity <= 0 ? 'disabled' : '' %>>
+                            Adicionar ao Carrinho
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <% }); %>
+</div>

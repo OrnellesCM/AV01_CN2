@@ -1,0 +1,50 @@
+<h2>Seu Carrinho</h2>
+<% if (cart.length > 0) { %>
+    <form action="/checkout" method="POST">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th>Preço</th>
+                    <th>Qtd</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% let total = 0; %>
+                <% cart.forEach(item => { %>
+                    <% total += item.Price * item.qty; %>
+                    <tr>
+                        <td><%= item.Name %></td>
+                        <td>R$ <%= item.Price.toFixed(2) %></td>
+                        <td><%= item.qty %></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <h4>Total: R$ <%= total.toFixed(2) %></h4>
+        
+        <hr>
+        <h5>Finalizar Pedido</h5>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label>Tipo de Entrega</label>
+                <select name="deliveryMethod" class="form-select" required>
+                    <option value="PAC">PAC (Correios)</option>
+                    <option value="SEDEX">SEDEX</option>
+                    <option value="Retirada">Retirada na Loja</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label>Método de Pagamento</label>
+                <select name="paymentMethod" class="form-select" required>
+                    <option value="Boleto">Boleto</option>
+                    <option value="CartaoCredito">Cartão de Crédito</option>
+                    <option value="PIX">PIX</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success btn-lg">Confirmar Pedido</button>
+    </form>
+<% } else { %>
+    <p>Seu carrinho está vazio.</p>
+<% } %>

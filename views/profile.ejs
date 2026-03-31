@@ -1,0 +1,35 @@
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Meus Dados</div>
+            <div class="card-body">
+                <p><strong>Nome:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <a href="#" class="btn btn-sm btn-outline-secondary">Editar Dados</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <h4>Meus Pedidos</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Data</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% orders.forEach(order => { %>
+                    <tr>
+                        <td><%= order.rowKey.substring(0, 8) %></td>
+                        <td><%= new Date(order.Date).toLocaleDateString() %></td>
+                        <td>R$ <%= order.Total.toFixed(2) %></td>
+                        <td><span class="badge bg-primary"><%= order.Status %></span></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+</div>

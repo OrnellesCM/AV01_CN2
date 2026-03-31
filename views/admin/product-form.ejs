@@ -1,0 +1,36 @@
+<div class="card mx-auto" style="max-width: 600px;">
+    <div class="card-header">Cadastrar Novo Produto</div>
+    <div class="card-body">
+        <form action="/admin/products/new" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label>Nome</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label>Marca</label>
+                <input type="text" name="brand" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label>Modelo</label>
+                <input type="text" name="model" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label>Preço</label>
+                <input type="number" step="0.01" name="price" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label>Quantidade</label>
+                <input type="number" name="quantity" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label>Descrição</label>
+                <textarea name="description" class="form-control"></textarea>
+            </div>
+            <div class="mb-3">
+                <label>Foto do Produto</label>
+                <input type="file" name="photo" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Salvar</button>
+        </form>
+    </div>
+</div>
