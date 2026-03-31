@@ -1,5 +1,5 @@
 {
-  "name": "ornelles",
+  "name": "lojaornelles",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -12,11 +12,13 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@azure/core-http": "^3.0.5",
     "@azure/data-tables": "^13.3.2",
     "@azure/storage-blob": "^12.31.0",
     "dotenv": "^17.3.1",
     "ejs": "^5.0.1",
     "express": "^5.2.1",
+    "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.19.0",
     "multer": "^2.1.1",
     "uuid": "^13.0.0"

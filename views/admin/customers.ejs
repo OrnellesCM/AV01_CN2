@@ -1,32 +1,45 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <title>Admin Clientes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <%- include('../partials/header') %>
-    <div class="container">
-        <h2>Gerenciar Clientes</h2>
-        <table class="table table-striped">
-            <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cidade</th><th>Ações</th></tr></thead>
+<h2 class="section-title">Gerenciamento de Clientes</h2>
+
+<div class="card page-card mb-4">
+    <div class="card-header">Cadastrar Cliente</div>
+    <div class="card-body">
+        <form action="/admin/customers/create" method="POST">
+            <div class="row g-2">
+                <div class="col-12 col-md-6 col-lg-3"><input type="text" name="nome" class="form-control" placeholder="Nome" required></div>
+                <div class="col-12 col-md-6 col-lg-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
+                <div class="col-6 col-lg-3"><input type="text" name="telefone" class="form-control" placeholder="Telefone"></div>
+                <div class="col-6 col-lg-3"><input type="text" name="endereco" class="form-control" placeholder="Endereço"></div>
+                <div class="col-12 mt-2 d-grid d-md-inline-flex"><button class="btn btn-success">Cadastrar</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="page-card p-2 p-md-3">
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Telefone</th>
+                    <th>Endereço</th>
+                    <th>Histórico</th>
+                </tr>
+            </thead>
             <tbody>
                 <% customers.forEach(c => { %>
-                    <tr>
-                        <td><%= c.nome %></td>
-                        <td><%= c.email %></td>
-                        <td><%= c.telefone %></td>
-                        <td><%= c.cidade %></td>
-                        <td>
-                            <button class="btn btn-sm btn-info" onclick="fetch('/admin/customers/<%= c.rowKey %>/orders').then(r=>r.json()).then(d => alert('Pedidos: ' + JSON.stringify(d, null, 2)))">Ver Pedidos</button>
-                            <form action="/admin/customers/delete/<%= c.rowKey %>" method="POST" style="display:inline;">
-                                <button class="btn btn-sm btn-danger" onclick="confirm('Excluir cliente?')">Del</button>
-                            </form>
-                        </td>
-                    </tr>
-                <% }) %>
+                <tr>
+                    <td><%= c.nome %></td>
+                    <td><%= c.rowKey %></td>
+                    <td><%= c.telefone %></td>
+                    <td><%= c.endereco %></td>
+                    <td>
+                        <a href="/profile?email=<%= c.rowKey %>" target="_blank" class="btn btn-sm btn-info">Ver Pedidos</a>
+                    </td>
+                </tr>
+                <% }); %>
             </tbody>
         </table>
     </div>
-</body>
-</html>
+</div>
