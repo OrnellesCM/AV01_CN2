@@ -2,10 +2,11 @@
 Avaliação 01 - Computação em nuvem 2
 
 ## Publicação na web
-- Aplicação -> [20.151.24.30:3000](http://20.151.24.30:3000)
+- Azure App Service ->[ornelles.azurewebsites.net](https://ornelles.azurewebsites.net)
+- Azure VM -> [20.151.24.30:3000](http://20.151.24.30:3000)
 
 ## Descrição
-A aplicação é um e-commerce, utiliza Azure Blob Storage e Table Storage para armazenamento!
+A aplicação é um loja virtual/e-commerce que utiliza recursos do Azure Blob Storage e Azure Table Storage para armazenamento em nuvem!
 
 ## Pré-requisitos
 - **Node.js**
