@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <title>Admin Produtos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <div class="container">
+        <h2>Gerenciar Produtos</h2>
+        <a href="/admin/products/new" class="btn btn-success mb-3">+ Novo Produto</a>
+        
+        <!-- Formulário de Filtros -->
+        <form method="GET" class="row g-3 mb-4 p-3 bg-light border rounded">
+            <div class="col-md-3"><input type="text" name="q" class="form-control" placeholder="Buscar por nome/desc" value="<%= query.q || '' %>"></div>
+            <div class="col-md-2"><input type="text" name="marca" class="form-control" placeholder="Marca" value="<%= query.marca || '' %>"></div>
+            <div class="col-md-2"><input type="text" name="modelo" class="form-control" placeholder="Modelo" value="<%= query.modelo || '' %>"></div>
+            <div class="col-md-2"><input type="number" name="precoMin" class="form-control" placeholder="Preço Mín" value="<%= query.precoMin || '' %>"></div>
+            <div class="col-md-2"><input type="number" name="precoMax" class="form-control" placeholder="Preço Máx" value="<%= query.precoMax || '' %>"></div>
+            <div class="col-md-1"><button class="btn btn-primary w-100">Filtrar</button></div>
+        </form>
+
+        <table class="table">
+            <thead><tr><th>Foto</th><th>Nome</th><th>Marca/Modelo</th><th>Preço</th><th>Estoque</th><th>Ações</th></tr></thead>
+            <tbody>
+                <% products.forEach(p => { %>
+                    <tr>
+                        <td><img src="<%= p.fotoUrl %>" style="width:50px;height:50px;object-fit:cover;"></td>
+                        <td><%= p.nome %></td>
+                        <td><%= p.marca %> / <%= p.modelo %></td>
+                        <td>R$ <%= p.preco.toFixed(2) %></td>
+                        <td><%= p.quantidade %></td>
+                        <td>
+                            <a href="/admin/products/edit/<%= p.rowKey %>" class="btn btn-sm btn-warning">Alt</a>
+                            <form action="/admin/products/delete/<%= p.rowKey %>" method="POST" style="display:inline;">
+                                <button class="btn btn-sm btn-danger" onclick="confirm('Excluir?')">Del</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

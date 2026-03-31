@@ -1,325 +1,270 @@
 require('dotenv').config();
-// Debug: Verifique se as variáveis estão carregando
-console.log('Account Name:', process.env.AZURE_STORAGE_ACCOUNT_NAME);
-console.log('SAS Key starts with ?:', process.env.AZURE_SAS_KEY ? process.env.AZURE_SAS_KEY.startsWith('?') : false);
-
-if (!process.env.AZURE_STORAGE_ACCOUNT_NAME || !process.env.AZURE_SAS_KEY) {
-    console.error("ERRO CRÍTICO: Variáveis de ambiente do Azure não definidas.");
-    process.exit(1);
-}
 const express = require('express');
 const session = require('express-session');
-const { TableClient, AzureSASCredential } = require('@azure/data-tables');
-const { BlobServiceClient } = require('@azure/storage-blob');
 const multer = require('multer');
+const { TableClient } = require("@azure/data-tables");
+const { BlobServiceClient } = require("@azure/storage-blob");
 const { v4: uuidv4 } = require('uuid');
-const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Configurações
-app.set('view engine', 'ejs');
-app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false
-}));
+app.use(express.json());
+app.use(session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: true }));
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-// Configuração Multer (Armazenamento em memória para upload direto p/ Azure)
+// Configuração Azure
+const tableSasUrl = process.env.AZURE_TABLE_SAS_URL;
+const blobSasUrl = process.env.AZURE_BLOB_SAS_URL;
+
+const blobServiceClient = new BlobServiceClient(blobSasUrl);
+// O Blob Storage ACEITA hífens
+const containerName = 'claudio-products-images'; 
+
+// O Table Storage NÃO ACEITA hífens. Usado 'claudio' grudado no nome.
+const productsTable = new TableClient(tableSasUrl, 'claudioproducts');
+const customersTable = new TableClient(tableSasUrl, 'claudiocustomers');
+const ordersTable = new TableClient(tableSasUrl, 'claudioorders');
+
+// Multer (Upload de imagens em memória)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- Conexão Azure ---
-const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-const sasKey = process.env.AZURE_SAS_KEY;
-const credential = new AzureSASCredential(sasKey);
-
-// Table Storage Clients
-const productsTable = new TableClient(`https://${accountName}.table.core.windows.net`, 'Products', credential);
-const customersTable = new TableClient(`https://${accountName}.table.core.windows.net`, 'Customers', credential);
-const ordersTable = new TableClient(`https://${accountName}.table.core.windows.net`, 'Orders', credential);
-
-// Blob Storage Client
-const blobServiceClient = new BlobServiceClient(`https://${accountName}.blob.core.windows.net`, credential);
-const containerName = "product-images";
-
-// Inicialização de Tabelas e Container
-async function initAzure() {
+// ==========================================
+// INICIALIZAÇÃO E SEED (Primeira Execução)
+// ==========================================
+async function initializeAzure() {
     try {
-        await productsTable.createTable();
-        await customersTable.createTable();
-        await ordersTable.createTable();
+        // Criar Container de Imagens
         const containerClient = blobServiceClient.getContainerClient(containerName);
         await containerClient.createIfNotExists();
-        console.log("Azure Storage inicializado com sucesso.");
+        console.log(`Container '${containerName}' garantido.`);
+
+        // Criar Tabelas (Nomes estritamente alfanuméricos)
+        for (const tbl of ['claudioproducts', 'claudiocustomers', 'claudioorders']) {
+            const client = new TableClient(tableSasUrl, tbl);
+            await client.createTable();
+            console.log(`Tabela '${tbl}' garantida.`);
+        }
+
+        // Seed: Inserir dados de exemplo se a tabela de produtos estiver vazia
+        const products = productsTable.listEntities();
+        let hasProducts = false;
+        for await (const p of products) { hasProducts = true; break; }
+
+        if (!hasProducts) {
+            const sampleProducts = [
+                { rowKey: `prod_${uuidv4()}`, nome: 'Notebook Gamer', descricao: 'RTX 4060, 16GB RAM', marca: 'Dell', modelo: 'G15', preco: 7500.00, quantidade: 10, fotoUrl: 'https://via.placeholder.com/300' },
+                { rowKey: `prod_${uuidv4()}`, nome: 'Mouse Sem Fio', descricao: 'Ergonômico, 2400DPI', marca: 'Logitech', modelo: 'MX Master', preco: 500.00, quantidade: 25, fotoUrl: 'https://via.placeholder.com/300' }
+            ];
+            for (const sp of sampleProducts) {
+                await productsTable.createEntity({ partitionKey: 'product', ...sp });
+            }
+
+            const sampleCustomer = {
+                partitionKey: 'customer',
+                rowKey: `cust_${uuidv4()}`,
+                nome: 'João da Silva',
+                cpf: '123.456.789-00',
+                email: 'joao@example.com',
+                telefone: '11999999999',
+                endereco: 'Rua das Flores, 100',
+                cidade: 'São Paulo',
+                cep: '01000-000'
+            };
+            await customersTable.createEntity(sampleCustomer);
+            console.log('Dados de exemplo inseridos.');
+        }
     } catch (err) {
-        console.log("Erro ao inicializar Azure (pode ser que já existam):", err.message);
+        console.error('Erro na inicialização do Azure:', err.message);
     }
 }
-initAzure();
 
-// --- Middleware de Autenticação ---
-const requireLogin = (req, res, next) => {
-    if (!req.session.user) return res.redirect('/login');
-    next();
-};
+// ==========================================
+// ROTAS DA LOJA (CLIENTE)
+// ==========================================
 
-const requireAdmin = (req, res, next) => {
-    if (req.session.user && req.session.user.isAdmin) return next();
-    res.status(403).send('Acesso negado.');
-};
-
-// =======================================
-// ROTAS PÚBLICAS (LOJA)
-// =======================================
-
-// Página Inicial - Listagem de Produtos
 app.get('/', async (req, res) => {
+    const products = [];
     try {
-        let filter = "PartitionKey eq 'PRODUCT'";
-        const search = req.query.search;
-        const brand = req.query.brand;
-        
-        // Filtros dinâmicos simples (para complexos usar OData gerado)
-        if (search) filter += ` and contains(Name, '${search}')`;
-        if (brand) filter += ` and Brand eq '${brand}'`;
-        
-        // Table Storage não suporta faixa de preço nativamente de forma eficiente sem indexes, 
-        // faremos filtro básico e refinamos em memória ou OData simples.
-        const entities = productsTable.listEntities({ queryOptions: { filter } });
-        const products = [];
-        for await (const entity of entities) {
-            products.push(entity);
-        }
-        
-        res.render('index', { user: req.session.user, products });
-    } catch (err) {
-        res.send("Erro ao carregar produtos: " + err.message);
-    }
+        const entities = productsTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'product'" } });
+        for await (const entity of entities) products.push(entity);
+    } catch (err) { console.error(err); }
+    res.render('index', { products, cart: req.session.cart || [] });
 });
 
-// Carrinho
-app.get('/cart', (req, res) => {
-    const cart = req.session.cart || [];
-    res.render('cart', { user: req.session.user, cart });
-});
-
-app.post('/cart/add', async (req, res) => {
-    const { productId } = req.body;
-    try {
-        const product = await productsTable.getEntity('PRODUCT', productId);
-        const cart = req.session.cart || [];
-        
-        const existingItem = cart.find(item => item.rowKey === productId);
-        if (existingItem) {
-            existingItem.qty++;
-        } else {
-            cart.push({ ...product, rowKey: productId, qty: 1 });
-        }
-        req.session.cart = cart;
-        res.redirect('/cart');
-    } catch (err) {
-        res.send("Produto não encontrado.");
-    }
-});
-
-// Checkout
-app.post('/checkout', requireLogin, async (req, res) => {
-    const { deliveryMethod, paymentMethod } = req.body;
-    const cart = req.session.cart || [];
+app.post('/cart/add/:id', async (req, res) => {
+    if (!req.session.cart) req.session.cart = [];
+    const product = await productsTable.getEntity('product', req.params.id);
     
-    if (cart.length === 0) return res.redirect('/');
-
-    // Validação simples de estoque
-    for (let item of cart) {
-        const prod = await productsTable.getEntity('PRODUCT', item.rowKey);
-        if (prod.Quantity < item.qty) {
-            return res.send(`Estoque insuficiente para ${prod.Name}`);
-        }
+    const existingIndex = req.session.cart.findIndex(item => item.rowKey === req.params.id);
+    if (existingIndex >= 0) {
+        req.session.cart[existingIndex].qty += 1;
+    } else {
+        req.session.cart.push({ ...product, qty: 1 });
     }
-
-    // Criar Pedido
-    const orderId = uuidv4();
-    const total = cart.reduce((sum, item) => sum + (item.Price * item.qty), 0);
-    
-    const order = {
-        partitionKey: req.session.user.rowKey, // ID Cliente
-        rowKey: orderId,
-        Items: JSON.stringify(cart),
-        Total: total,
-        DeliveryMethod: deliveryMethod,
-        PaymentMethod: paymentMethod,
-        Status: "Processando",
-        Date: new Date().toISOString()
-    };
-
-    await ordersTable.createEntity(order);
-
-    // Atualizar Estoque
-    for (let item of cart) {
-        const prod = await productsTable.getEntity('PRODUCT', item.rowKey);
-        prod.Quantity -= item.qty;
-        await productsTable.updateEntity(prod, "Merge");
-    }
-
-    req.session.cart = [];
-    res.redirect('/profile');
-});
-
-// =======================================
-// AUTENTICAÇÃO
-// =======================================
-
-app.get('/login', (req, res) => res.render('login', { error: null }));
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        // Tenta buscar admin (email fixo para exemplo) ou cliente
-        // Para simplificar, assumimos que PartitionKey de cliente é 'CUSTOMER'
-        const filter = `PartitionKey eq 'CUSTOMER' and Email eq '${email}'`;
-        const entities = customersTable.listEntities({ queryOptions: { filter } });
-        
-        let user = null;
-        for await (const entity of entities) {
-            user = entity;
-        }
-
-        if (!user) return res.render('login', { error: "Usuário não encontrado" });
-        
-        const isValid = await bcrypt.compare(password, user.Password);
-        if (!isValid) return res.render('login', { error: "Senha inválida" });
-
-        req.session.user = { 
-            rowKey: user.rowKey, 
-            name: user.Name, 
-            email: user.Email, 
-            isAdmin: user.IsAdmin || false 
-        };
-        
-        if (user.IsAdmin) return res.redirect('/admin/products');
-        res.redirect('/profile');
-    } catch (err) {
-        res.send("Erro no login: " + err.message);
-    }
-});
-
-app.get('/register', (req, res) => res.render('register', { error: null }));
-app.post('/register', async (req, res) => {
-    const { name, email, password, address, phone } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const customerId = uuidv4();
-
-    const customer = {
-        partitionKey: 'CUSTOMER',
-        rowKey: customerId,
-        Name: name,
-        Email: email,
-        Password: hashedPassword,
-        Address: address,
-        Phone: phone,
-        IsAdmin: false
-    };
-
-    try {
-        await customersTable.createEntity(customer);
-        res.redirect('/login');
-    } catch (err) {
-        res.send("Erro ao cadastrar: " + err.message);
-    }
-});
-
-app.get('/logout', (req, res) => {
-    req.session.destroy();
     res.redirect('/');
 });
 
-// Perfil do Cliente
-app.get('/profile', requireLogin, async (req, res) => {
-    try {
-        const filter = `PartitionKey eq '${req.session.user.rowKey}'`;
-        const entities = ordersTable.listEntities({ queryOptions: { filter } });
-        const orders = [];
-        for await (const entity of entities) {
-            orders.push(entity);
+app.get('/cart', (req, res) => {
+    const cart = req.session.cart || [];
+    res.render('cart', { cart });
+});
+
+app.post('/checkout', async (req, res) => {
+    const cart = req.session.cart || [];
+    if (cart.length === 0) return res.redirect('/cart');
+    
+    const { tipoEntrega, metodoPagamento } = req.body;
+    
+    for (const item of cart) {
+        if (item.qty > item.quantidade) {
+            return res.send(`Erro: Produto ${item.nome} não tem estoque suficiente.`);
         }
-        res.render('profile', { user: req.session.user, orders });
+    }
+
+    try {
+        for (const item of cart) {
+            await productsTable.updateEntity({
+                partitionKey: 'product',
+                rowKey: item.rowKey,
+                quantidade: item.quantidade - item.qty
+            }, 'Merge');
+        }
+
+        const customers = customersTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'customer'" } });
+        let custId = 'guest';
+        for await (const c of customers) { custId = c.rowKey; break; }
+
+        await ordersTable.createEntity({
+            partitionKey: `order_${custId}`,
+            rowKey: `order_${uuidv4()}`,
+            items: JSON.stringify(cart.map(i => ({ nome: i.nome, qty: i.qty, preco: i.preco }))),
+            tipoEntrega,
+            metodoPagamento,
+            status: 'Confirmado',
+            total: cart.reduce((sum, i) => sum + (i.preco * i.qty), 0)
+        });
+
+        req.session.cart = [];
+        res.redirect('/profile');
     } catch (err) {
-        res.send("Erro: " + err.message);
+        res.status(500).send('Erro ao finalizar pedido: ' + err.message);
     }
 });
 
-// =======================================
-// PAINEL ADMIN - PRODUTOS
-// =======================================
+app.get('/profile', async (req, res) => {
+    const customers = customersTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'customer'" } });
+    let customer = {};
+    for await (const c of customers) { customer = c; break; }
 
-app.get('/admin/products', requireAdmin, async (req, res) => {
-    const entities = productsTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'PRODUCT'" } });
-    const products = [];
+    const orders = [];
+    const orderEntities = ordersTable.listEntities({ queryOptions: { filter: `PartitionKey eq 'order_${customer.rowKey}'` } });
+    for await (const o of orderEntities) orders.push(o);
+
+    res.render('profile', { customer, orders });
+});
+
+app.post('/profile/edit', async (req, res) => {
+    const customers = customersTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'customer'" } });
+    let customer = {};
+    for await (const c of customers) { customer = c; break; }
+
+    await customersTable.updateEntity({
+        partitionKey: customer.partitionKey,
+        rowKey: customer.rowKey,
+        ...req.body,
+        cpf: customer.cpf
+    }, 'Merge');
+    res.redirect('/profile');
+});
+
+// ==========================================
+// ROTAS ADMIN: PRODUTOS
+// ==========================================
+app.get('/admin/products', async (req, res) => {
+    let products = [];
+    const entities = productsTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'product'" } });
     for await (const entity of entities) products.push(entity);
-    res.render('admin/products', { products });
+
+    const { q, marca, modelo, precoMin, precoMax } = req.query;
+    if (q) products = products.filter(p => p.nome.toLowerCase().includes(q.toLowerCase()) || p.descricao.toLowerCase().includes(q.toLowerCase()));
+    if (marca) products = products.filter(p => p.marca.toLowerCase() === marca.toLowerCase());
+    if (modelo) products = products.filter(p => p.modelo.toLowerCase() === modelo.toLowerCase());
+    if (precoMin) products = products.filter(p => p.preco >= parseFloat(precoMin));
+    if (precoMax) products = products.filter(p => p.preco <= parseFloat(precoMax));
+
+    res.render('admin/products', { products, query: req.query });
 });
 
-app.get('/admin/products/new', requireAdmin, (req, res) => {
-    res.render('admin/product-form', { product: {} });
+app.get('/admin/products/new', (req, res) => res.render('admin/product-form', { product: {} }));
+app.get('/admin/products/edit/:id', async (req, res) => {
+    const product = await productsTable.getEntity('product', req.params.id);
+    res.render('admin/product-form', { product });
 });
 
-app.post('/admin/products/new', requireAdmin, upload.single('photo'), async (req, res) => {
-    const { name, description, brand, model, price, quantity } = req.body;
-    const productId = uuidv4();
-    let imageUrl = '';
-
-    // Upload da Imagem
+app.post('/admin/products', upload.single('foto'), async (req, res) => {
+    let fotoUrl = req.body.fotoUrl || '';
+    
     if (req.file) {
-        const containerClient = blobServiceClient.getContainerClient(containerName);
-        const blobName = `${productId}-${req.file.originalname}`;
-        const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+        const blobName = `claudio-${uuidv4()}_${req.file.originalname}`;
+        const blockBlobClient = blobServiceClient.getContainerClient(containerName).getBlockBlobClient(blobName);
         await blockBlobClient.uploadData(req.file.buffer);
-        imageUrl = blockBlobClient.url;
+        fotoUrl = blockBlobClient.url;
     }
 
-    const product = {
-        partitionKey: 'PRODUCT',
-        rowKey: productId,
-        Name: name,
-        Description: description,
-        Brand: brand,
-        Model: model,
-        Price: parseFloat(price),
-        Quantity: parseInt(quantity),
-        ImageUrl: imageUrl
+    const id = req.body.rowKey || `prod_${uuidv4()}`;
+    const entity = {
+        partitionKey: 'product',
+        rowKey: id,
+        nome: req.body.nome,
+        descricao: req.body.descricao,
+        marca: req.body.marca,
+        modelo: req.body.modelo,
+        preco: parseFloat(req.body.preco),
+        quantidade: parseInt(req.body.quantidade),
+        fotoUrl: fotoUrl
     };
 
-    await productsTable.createEntity(product);
+    if (req.body.rowKey) {
+        await productsTable.updateEntity(entity, 'Merge');
+    } else {
+        await productsTable.createEntity(entity);
+    }
     res.redirect('/admin/products');
 });
 
-app.post('/admin/products/delete/:id', requireAdmin, async (req, res) => {
-    await productsTable.deleteEntity('PRODUCT', req.params.id);
+app.post('/admin/products/delete/:id', async (req, res) => {
+    await productsTable.deleteEntity('product', req.params.id);
     res.redirect('/admin/products');
 });
 
-// =======================================
-// PAINEL ADMIN - CLIENTES
-// =======================================
-
-app.get('/admin/customers', requireAdmin, async (req, res) => {
-    const entities = customersTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'CUSTOMER'" } });
-    const customers = [];
+// ==========================================
+// ROTAS ADMIN: CLIENTES
+// ==========================================
+app.get('/admin/customers', async (req, res) => {
+    let customers = [];
+    const entities = customersTable.listEntities({ queryOptions: { filter: "PartitionKey eq 'customer'" } });
     for await (const entity of entities) customers.push(entity);
     res.render('admin/customers', { customers });
 });
 
-app.get('/admin/customers/orders/:id', requireAdmin, async (req, res) => {
-    const customerId = req.params.id;
-    const entities = ordersTable.listEntities({ queryOptions: { filter: `PartitionKey eq '${customerId}'` } });
+app.get('/admin/customers/:id/orders', async (req, res) => {
     const orders = [];
+    const entities = ordersTable.listEntities({ queryOptions: { filter: `PartitionKey eq 'order_${req.params.id}'` } });
     for await (const entity of entities) orders.push(entity);
-    res.render('admin/orders', { orders, customerId });
+    res.json(orders);
 });
 
-// Iniciar Servidor
-app.listen(process.env.PORT || 3000, () => {
-    console.log(`Servidor rodando na porta ${process.env.PORT || 3000}`);
+app.post('/admin/customers/delete/:id', async (req, res) => {
+    await customersTable.deleteEntity('customer', req.params.id);
+    res.redirect('/admin/customers');
+});
+
+// Inicialização
+initializeAzure().then(() => {
+    app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
 });

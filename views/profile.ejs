@@ -1,35 +1,39 @@
-<div class="row">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">Meus Dados</div>
-            <div class="card-body">
-                <p><strong>Nome:</strong> <%= user.name %></p>
-                <p><strong>Email:</strong> <%= user.email %></p>
-                <a href="#" class="btn btn-sm btn-outline-secondary">Editar Dados</a>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <title>Meu Perfil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('partials/header') %>
+    <div class="container">
+        <h2>Meus Dados</h2>
+        <form method="POST" action="/profile/edit" class="mb-5">
+            <div class="row">
+                <div class="col-md-6 mb-3"><label>Nome</label><input type="text" name="nome" value="<%= customer.nome %>" class="form-control" required></div>
+                <div class="col-md-6 mb-3"><label>Email</label><input type="email" name="email" value="<%= customer.email %>" class="form-control" required></div>
+                <div class="col-md-6 mb-3"><label>Telefone</label><input type="text" name="telefone" value="<%= customer.telefone %>" class="form-control"></div>
+                <div class="col-md-6 mb-3"><label>CEP</label><input type="text" name="cep" value="<%= customer.cep %>" class="form-control"></div>
+                <div class="col-md-12 mb-3"><label>Endereço</label><input type="text" name="endereco" value="<%= customer.endereco %>" class="form-control"></div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-8">
-        <h4>Meus Pedidos</h4>
+            <button type="submit" class="btn btn-warning">Salvar Alterações</button>
+        </form>
+
+        <h2>Meus Pedidos</h2>
         <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Data</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Pedido ID</th><th>Data (RowKey)</th><th>Total</th><th>Status</th><th>Entrega</th></tr></thead>
             <tbody>
-                <% orders.forEach(order => { %>
+                <% orders.forEach(o => { %>
                     <tr>
-                        <td><%= order.rowKey.substring(0, 8) %></td>
-                        <td><%= new Date(order.Date).toLocaleDateString() %></td>
-                        <td>R$ <%= order.Total.toFixed(2) %></td>
-                        <td><span class="badge bg-primary"><%= order.Status %></span></td>
+                        <td><%= o.rowKey.substring(0,12) %></td>
+                        <td><%= o.rowKey %></td>
+                        <td>R$ <%= o.total ? o.total.toFixed(2) : '0.00' %></td>
+                        <td><span class="badge bg-success"><%= o.status %></span></td>
+                        <td><%= o.tipoEntrega %></td>
                     </tr>
-                <% }); %>
+                <% }) %>
             </tbody>
         </table>
     </div>
-</div>
+</body>
+</html>
