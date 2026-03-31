@@ -1,5 +1,8 @@
-<h2 class="section-title">Gerenciamento de Produtos</h2>
 
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="section-title">GERENCIAMENTO DOS PRODUTOS</h2>
+    <a href="/" class="btn btn-outline-secondary btn-sm">Voltar para loja</a>
+</div>
 <!-- Formulário de Cadastro -->
 <div class="card page-card mb-4">
     <div class="card-header">Cadastrar Novo Produto</div>
@@ -13,7 +16,7 @@
                 <div class="col-6 col-md-3"><input type="number" name="quantidade" class="form-control" placeholder="Quantidade" required></div>
                 <div class="col-12 col-md-6"><textarea name="descricao" class="form-control" placeholder="Descrição"></textarea></div>
                 <div class="col-12 col-md-6"><input type="file" name="photo" class="form-control" accept="image/*"></div>
-                <div class="col-12 mt-2 d-grid d-md-inline-flex"><button class="btn btn-success">Salvar</button></div>
+                <div class="col-12 mt-2 d-grid d-md-inline-flex"><button class="btn btn-success">SALVAR</button></div>
             </div>
         </form>
     </div>
@@ -43,11 +46,11 @@
                     <td><%= p.quantidade %></td>
                     <td>
                         <div class="d-flex gap-1">
-                            <a class="btn btn-primary btn-sm" href="/admin/products/edit?partitionKey=<%= encodeURIComponent(p.partitionKey) %>&productId=<%= encodeURIComponent(p.rowKey) %>">Editar</a>
+                            <a class="btn btn-sm btn-warning" href="/admin/products/edit?partitionKey=<%= encodeURIComponent(p.partitionKey) %>&productId=<%= encodeURIComponent(p.rowKey) %>">ALTERAR</a>
                             <form action="/admin/products/delete" method="POST" onsubmit="return confirm('Excluir?')">
                                 <input type="hidden" name="productId" value="<%= p.rowKey %>">
                                 <input type="hidden" name="partitionKey" value="<%= p.partitionKey %>">
-                                <button class="btn btn-danger btn-sm">Excluir</button>
+                                <button class="btn btn-danger btn-sm">APAGAR</button>
                             </form>
                         </div>
                     </td>

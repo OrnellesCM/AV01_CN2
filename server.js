@@ -341,20 +341,69 @@ app.get('/admin/customers', async (req, res) => {
 });
 
 app.post('/admin/customers/create', async (req, res) => {
-    const { nome, email, endereco, telefone } = req.body;
+    const { nome, sobrenome, email, endereco, telefone } = req.body;
     const client = getTableClient(tableNames.customers);
     
     const entity = {
         partitionKey: "Clientes",
         rowKey: email, // Email como ID único
-        nome, endereco, telefone
+        nome,
+        sobrenome: sobrenome || '',
+        endereco,
+        telefone
     };
     try {
         await client.createEntity(entity);
+        return res.redirect('/admin/customers?type=success&notice=Cliente+cadastrado+com+sucesso');
     } catch (e) {
         // Erro se email já existir
+        return res.redirect('/admin/customers?type=danger&notice=Falha+ao+cadastrar+cliente');
     }
-    res.redirect('/admin/customers');
+});
+
+app.get('/admin/customers/edit', async (req, res) => {
+    const email = req.query.email;
+    if (!email) {
+        return res.redirect('/admin/customers?type=danger&notice=Cliente+invalido+para+edicao');
+    }
+
+    const client = getTableClient(tableNames.customers);
+    try {
+        const customer = await client.getEntity("Clientes", email);
+        return res.render('admin/customer-edit', { customer });
+    } catch (e) {
+        return res.redirect('/admin/customers?type=danger&notice=Cliente+nao+encontrado');
+    }
+});
+
+app.post('/admin/customers/update', async (req, res) => {
+    const { originalEmail, nome, sobrenome, email, endereco, telefone } = req.body;
+    const client = getTableClient(tableNames.customers);
+
+    if (!originalEmail || !email) {
+        return res.redirect('/admin/customers?type=danger&notice=Dados+invalidos+para+atualizacao');
+    }
+
+    const updatedEntity = {
+        partitionKey: "Clientes",
+        rowKey: email,
+        nome,
+        sobrenome: sobrenome || '',
+        endereco,
+        telefone
+    };
+
+    try {
+        if (originalEmail !== email) {
+            await client.createEntity(updatedEntity);
+            await client.deleteEntity("Clientes", originalEmail);
+        } else {
+            await client.updateEntity(updatedEntity, "Replace");
+        }
+        return res.redirect('/admin/customers?type=success&notice=Cliente+atualizado+com+sucesso');
+    } catch (e) {
+        return res.redirect('/admin/customers?type=danger&notice=Falha+ao+atualizar+cliente');
+    }
 });
 
 // Servidor

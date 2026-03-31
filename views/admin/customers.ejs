@@ -1,15 +1,19 @@
-<h2 class="section-title">Gerenciamento de Clientes</h2>
 
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="section-title">GERENCIAMENTO DOS CLIENTES</h2>
+    <a href="/" class="btn btn-outline-secondary btn-sm">Voltar para loja</a>
+</div>
 <div class="card page-card mb-4">
     <div class="card-header">Cadastrar Cliente</div>
     <div class="card-body">
         <form action="/admin/customers/create" method="POST">
             <div class="row g-2">
                 <div class="col-12 col-md-6 col-lg-3"><input type="text" name="nome" class="form-control" placeholder="Nome" required></div>
+                <div class="col-12 col-md-6 col-lg-3"><input type="text" name="sobrenome" class="form-control" placeholder="Sobrenome" required></div>
                 <div class="col-12 col-md-6 col-lg-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
                 <div class="col-6 col-lg-3"><input type="text" name="telefone" class="form-control" placeholder="Telefone"></div>
                 <div class="col-6 col-lg-3"><input type="text" name="endereco" class="form-control" placeholder="Endereço"></div>
-                <div class="col-12 mt-2 d-grid d-md-inline-flex"><button class="btn btn-success">Cadastrar</button></div>
+                <div class="col-12 mt-2 d-grid d-md-inline-flex"><button class="btn btn-success">SALVAR</button></div>
             </div>
         </form>
     </div>
@@ -20,22 +24,23 @@
         <table class="table table-striped align-middle mb-0">
             <thead>
                 <tr>
-                    <th>Nome</th>
+                    <th>Nome Completo</th>
                     <th>Email</th>
                     <th>Telefone</th>
                     <th>Endereço</th>
-                    <th>Histórico</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 <% customers.forEach(c => { %>
                 <tr>
-                    <td><%= c.nome %></td>
+                    <td><%= `${c.nome || ''} ${c.sobrenome || ''}`.trim() || '-' %></td>
                     <td><%= c.rowKey %></td>
                     <td><%= c.telefone %></td>
                     <td><%= c.endereco %></td>
                     <td>
-                        <a href="/profile?email=<%= c.rowKey %>" target="_blank" class="btn btn-sm btn-info">Ver Pedidos</a>
+                        <a href="/profile?email=<%= c.rowKey %>" target="_self" class="btn btn-sm btn-info">PEDIDOS</a>
+                        <a href="/admin/customers/edit?email=<%= encodeURIComponent(c.rowKey) %>" class="btn btn-sm btn-warning">ALTERAR</a>
                     </td>
                 </tr>
                 <% }); %>

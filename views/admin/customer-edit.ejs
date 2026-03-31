@@ -1,0 +1,38 @@
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="section-title mb-0">ALTERAÇÕES NO CLIENTE</h2>
+    <a href="/admin/customers" class="btn btn-outline-secondary btn-sm">Voltar</a>
+</div>
+
+<div class="card page-card">
+    <div class="card-body p-3 p-md-4">
+        <form action="/admin/customers/update" method="POST">
+            <input type="hidden" name="originalEmail" value="<%= customer.rowKey %>">
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Nome</label>
+                    <input type="text" name="nome" class="form-control" value="<%= customer.nome %>" required>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Sobrenome</label>
+                    <input type="text" name="sobrenome" class="form-control" value="<%= customer.sobrenome || '' %>" required>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="<%= customer.rowKey %>" required>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" name="telefone" class="form-control" value="<%= customer.telefone || '' %>">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Endereço</label>
+                    <input type="text" name="endereco" class="form-control" value="<%= customer.endereco || '' %>">
+                </div>
+                <div class="col-12 d-grid d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-success">SALVAR ALTERAÇÕES</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

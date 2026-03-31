@@ -1,4 +1,8 @@
-<h2 class="section-title">Carrinho de Compras</h2>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="section-title">CARRINHO DE COMPRAS</h2>
+    <a href="/" class="btn btn-outline-secondary btn-sm">Voltar para loja</a>
+</div>
 <% if (cart.length === 0) { %>
     <div class="alert alert-info page-card border-0">Seu carrinho está vazio.</div>
 <% } else { %>
@@ -68,6 +72,7 @@
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary btn-lg w-100">Confirmar Pedido</button>
                 </div>
+                
             </div>
         </form>
     </div>
