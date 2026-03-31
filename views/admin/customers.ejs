@@ -39,8 +39,12 @@
                     <td><%= c.telefone %></td>
                     <td><%= c.endereco %></td>
                     <td>
-                        <a href="/profile?email=<%= c.rowKey %>" target="_self" class="btn btn-sm btn-info">PEDIDOS</a>
-                        <a href="/admin/customers/edit?email=<%= encodeURIComponent(c.rowKey) %>" class="btn btn-sm btn-warning">ALTERAR</a>
+                        <a href="/profile?email=<%= c.rowKey %>" target="_self" class="btn btn-sm btn-info my-1">PEDIDOS</a>
+                        <a href="/admin/customers/edit?email=<%= encodeURIComponent(c.rowKey) %>" class="btn btn-sm btn-warning my-1">ALTERAR</a>
+                        <form action="/admin/customers/delete" method="POST" class="d-inline" onsubmit="return confirm('Deseja realmente apagar este cliente?');">
+                            <input type="hidden" name="email" value="<%= c.rowKey %>">
+                            <button type="submit" class="btn btn-sm btn-danger my-1">APAGAR</button>
+                        </form>
                     </td>
                 </tr>
                 <% }); %>

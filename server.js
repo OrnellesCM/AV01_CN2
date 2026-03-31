@@ -406,6 +406,22 @@ app.post('/admin/customers/update', async (req, res) => {
     }
 });
 
+app.post('/admin/customers/delete', async (req, res) => {
+    const { email } = req.body;
+    const client = getTableClient(tableNames.customers);
+
+    if (!email) {
+        return res.redirect('/admin/customers?type=danger&notice=Cliente+invalido+para+exclusao');
+    }
+
+    try {
+        await client.deleteEntity("Clientes", email);
+        return res.redirect('/admin/customers?type=success&notice=Cliente+excluido+com+sucesso');
+    } catch (e) {
+        return res.redirect('/admin/customers?type=danger&notice=Falha+ao+excluir+cliente');
+    }
+});
+
 // Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log(`Server running on port ${process.env.PORT || 3000}`);
